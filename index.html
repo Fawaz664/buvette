@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0f172a" />
+  <title>Gestion Buvette - Temps Réel</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="#manifest">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Buvette">
+  <link rel="apple-touch-icon" href="image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90' fill='%23f97316'%3E🍻%3C/text%3E%3C/svg%3E">
+
+  <style>
+    body { font-family: Arial, sans-serif; background: #f8fafc; margin: 0; padding: 0; }
+    header { background: #0f172a; color: white; padding: 15px; text-align: center; }
+    .container { padding: 20px; max-width: 900px; margin: auto; }
+    .card { background: white; border-radius: 12px; padding: 20px; margin: 20px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center; cursor: pointer; font-weight: bold; font-size: 18px; color: #0f172a; user-select: none; }
+    form label { display: block; margin: 15px 0 5px; }
+    input, button, select { padding: 10px; margin-top: 5px; width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }
+    button { background: #0f172a; color: white; font-weight: bold; cursor: pointer; margin-top: 15px; }
+    table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; margin-top: 20px; }
+    th, td { padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: left; }
+    .link-back { margin-bottom: 20px; display: inline-block; color: #0f172a; cursor: pointer; font-weight: bold; user-select: none; }
+    .link-view-sales { display: inline-block; margin-top: 15px; cursor: pointer; color: #0f172a; font-weight: bold; text-decoration: underline; user-select: none; }
+    .actions-buttons { margin-top: 15px; display: flex; justify-content: space-between; gap: 10px; }
+    .actions-buttons button { flex: 1; }
+    .realtime-status { text-align: center; padding: 8px; font-size: 14px; color: #0f172a; background: #f1f5f9; border-radius: 6px; margin: 10px 0; font-weight: bold; }
+    @media print { body * { visibility: hidden; } #printSection, #printSection * { visibility: visible; } #printSection { position: absolute; top: 0; left: 0; width: 100%; padding: 20px; box-sizing: border-box; font-size: 14px; } .actions-buttons, .link-back, header { display: none !important; } }
+    #chartContainer { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px; }
+    .chart-box { flex: 1; min-width: 300px; background: white; border-radius: 12px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .chart-box h3 { margin-top: 0; color: #0f172a; font-size: 16px; text-align: center; }
+  </style>
+
+  <!-- Manifest intégré -->
+  <script type="application/ld+json" id="manifest">
+    {
+      "name": "Gestion Buvette",
+      "short_name": "Buvette",
+      "start_url": ".",
+      "display": "standalone",
+      "background_color": "#f8fafc",
+      "theme_color": "#0f172a",
+      "description": "Application de gestion des ventes en temps réel",
+      "icons": [
+        {
+          "src": "image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90' fill='%23f97316'%3E🍻%3C/text%3E%3C/svg%3E",
+          "sizes": "192x192",
+          "type": "image/svg+xml"
+        }
+      ]
+    }
+  </script>
+</head>
+<body>
+  <header><h1>📊 Gestion Buvette - Temps Réel</h1></header>
+  <div class="realtime-status">🟢 Connecté en temps réel</div>
+
+  <main class="container" id="app">
+    <!-- Accueil -->
+    <div id="page-accueil">
+      <div class="card" onclick="showPage('ventes')">💰 Gérer les ventes</div>
+      <div class="card" onclick="showPage('stock')">📦 Suivi du stock</div>
+      <div class="card" onclick="showPage('stats')">📈 Statistiques</div>
+      <div class="card" style="background:#ef4444;" onclick="reinitialiserDonnees()">🔄 Réinitialiser</div>
+    </div>
+
+    <!-- Page Ventes -->
+    <div id="page-ventes" style="display:none;">
+      <span class="link-back" onclick="showPage('accueil')">← Retour au menu</span>
+      <h2>💰 Ajouter une vente</h2>
+      <form id="venteForm">
+        <label>Produit :
+          <input type="text" id="produit" list="produits-list" required autocomplete="off" placeholder="Sélectionnez ou tapez un produit">
+          <datalist id="produits-list">
+            <option value="La Béninoise Grande Bouteille">
+            <option value="La Béninoise Petite Bouteille">
+            <option value="Pils Togo Grande Bouteille">
+            <option value="Youki Cocktail Petite Bouteille">
+            <option value="Youki Cocktail Grande Bouteille">
+            <option value="Youki Pamplemousse Grande Bouteille">
+            <option value="Youki Pamplemousse Petite Bouteille">
+            <option value="Youki Moka Café  Grande Bouteille">
+            <option value="Youki Moka Café  Petite Bouteille">
+            <option value="Youzou (Sprite) Grande Bouteille">
+            <option value="Youzou (Sprite) Petite Bouteille">
+            <option value="Wisky Cola">
+            <option value="Doppel Energy">
+            <option value="XXL Energy">
+            <option value="Flags">
+            <option value="Castel">
+            <option value="Beaufort Grande Bouteille">
+            <option value="Beaufort Petite Bouteille">
+            <option value="Guinness">
+            <option value="Awoyo">
+            <option value="Hagbè">
+            <option value="Kwabo">
+            <option value="Racine">
+            <option value="Valmont">
+            <option value="Coca-Cola Grande Bouteille">
+            <option value="Coca-Cola Petite Bouteille">
+            <option value="Vody 22%">
+            <option value="Vody 18%">
+            <option value="EKU">
+            <option value="Chil Grande Bouteille">
+            <option value="Chil Petite Bouteille">
+            <option value="Petit LB">
+            <option value="BB Lager">
+            <option value="Tequila">
+            <option value="FIFA">
+            <option value="Posso Citron">
+            <option value="Comtesse Citron">
+            <option value="Champagne (Moët & Chandon, Brut, Rosé, etc.)">
+            <option value="Whisky (Johnnie Walker, Ballantine’s, Chivas Regal)">
+            <option value="Vodka (Smirnoff, Absolut)">
+            <option value="Rhum (Havana Club, Captain Morgan, rhums locaux)">
+            <option value="Gin (Beefeater, Gordon’s)">
+            <option value="Cognac (Hennessy, Martell)">
+            <option value="Baileys (liqueur crème)">
+            <option value="Cointreau (liqueur d’orange)">
+            <option value="Grand Marnier (liqueur d’orange)">
+            <option value="Malibu (liqueur coco)">
+            <option value="Champagne Mumm">
+            <option value="Champagne Piper-Heidsieck">
+            <option value="Champagne Veuve Clicquot">
+            <option value="Red Bull">
+            <option value="Heineken">
+            <option value="Desperados">
+          </datalist>
+        </label>
+        <label>Quantité : <input type="number" id="quantite" required min="1"></label>
+        <label>Prix unitaire (FCFA) : <input type="number" id="prix" required min="1"></label>
+        <button type="submit">Ajouter la vente</button>
+      </form>
+      <div class="link-view-sales" onclick="showPage('consultVentes')">📄 Voir toutes les ventes</div>
+    </div>
+
+    <!-- Consultation des ventes -->
+    <div id="page-consultVentes" style="display:none;">
+      <span class="link-back" onclick="showPage('ventes')">← Retour</span>
+      <h2>📋 Ventes enregistrées</h2>
+      <table id="tableVentes">
+        <thead>
+          <tr>
+            <th>Date & Heure</th>
+            <th>Produit</th>
+            <th>Quantité</th>
+            <th>Prix unitaire</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody id="tableVentesBody"></tbody>
+      </table>
+    </div>
+
+    <!-- Page Stock -->
+    <div id="page-stock" style="display:none;">
+      <span class="link-back" onclick="showPage('accueil')">← Retour</span>
+      <h2>📥 Réception de stock</h2>
+      <form id="stockForm">
+        <label>Produit :
+          <input type="text" id="stockProduit" list="produits-list" required autocomplete="off">
+        </label>
+        <label>Quantité reçue :
+          <input type="number" id="stockQuantite" min="1" required>
+        </label>
+        <label>Fournisseur :
+          <input type="text" id="stockFournisseur" required>
+        </label>
+        <label>Date de livraison :
+          <input type="date" id="stockDate" required>
+        </label>
+        <button type="submit">📦 Ajouter au stock</button>
+      </form>
+      <div class="link-view-sales" onclick="showPage('etatStock')">📋 Voir l’état du stock</div>
+    </div>
+
+    <!-- État du stock -->
+    <div id="page-etatStock" style="display:none;">
+      <span class="link-back" onclick="showPage('stock')">← Retour</span>
+      <h2>📋 État du stock</h2>
+      <table id="tableStock">
+        <thead>
+          <tr>
+            <th>Produit</th>
+            <th>Qté reçue</th>
+            <th>Qté vendue</th>
+            <th>Reste</th>
+            <th>Date livraison</th>
+          </tr>
+        </thead>
+        <tbody id="stockBody"></tbody>
+      </table>
+    </div>
+
+    <!-- Statistiques -->
+    <div id="page-stats" style="display:none;">
+      <span class="link-back" onclick="showPage('accueil')">← Retour</span>
+      <h2>📈 Statistiques des ventes</h2>
+      <canvas id="ventesChart" style="max-height: 400px;"></canvas>
+    </div>
+  </main>
+
+  <!-- Section impression -->
+  <div id="printSection" style="display:none;"></div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
+  <script>
+    // === 🔑 REMPLACEZ CES 2 LIGNES AVEC VOS INFOS SUPABASE ===
+    const SUPABASE_URL = 'https://buvette.supabase.co'; // ← 🔴 COLLEZ VOTRE URL ICI
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpieHFzbGt6amF5aG10ZGNjZWp1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNzYyNDcsImV4cCI6MjA3MDg1MjI0N30.LuaDxGPRrldCJyJQ0DlnQKBZZdmitCT-DWrZa6fOdBg'; // ← 🔴 COLLEZ VOTRE CLÉ ICI
+
+    const { createClient } = supabase;
+    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // === ÉTAT LOCAL ===
+    let ventes = [];
+    let stock = [];
+
+    // === CHARGEMENT INITIAL ===
+    async function initApp() {
+      await Promise.all([chargerVentes(), chargerStock()]);
+      afficherVentesTable();
+      afficherEtatStock();
+      ecouterChangements();
+    }
+
+    async function chargerVentes() {
+      const { data, error } = await supabaseClient.from('ventes').select('*').order('date_iso', { ascending: false });
+      if (error) console.error("Erreur chargement ventes", error);
+      else ventes = data;
+    }
+
+    async function chargerStock() {
+      const { data, error } = await supabaseClient.from('stock').select('*');
+      if (error) console.error("Erreur chargement stock", error);
+      else stock = data;
+    }
+
+    // === ÉCOUTE EN TEMPS RÉEL (REALTIME) ===
+    function ecouterChangements() {
+      supabaseClient.channel('realtime sales')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'ventes' }, (payload) => {
+          ventes.unshift(payload.new);
+          if (document.getElementById('page-consultVentes').style.display === 'block') {
+            afficherVentesTable();
+          }
+          if (document.getElementById('page-stats').style.display === 'block') {
+            afficherGraphique();
+          }
+        })
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'ventes' }, () => {
+          chargerVentes().then(afficherVentesTable);
+        })
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'stock' }, (payload) => {
+          stock.push(payload.new);
+          if (document.getElementById('page-etatStock').style.display === 'block') {
+            afficherEtatStock();
+          }
+        })
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'stock' }, (payload) => {
+          const index = stock.findIndex(s => s.id === payload.new.id);
+          if (index !== -1) stock[index] = payload.new;
+          if (document.getElementById('page-etatStock').style.display === 'block') {
+            afficherEtatStock();
+          }
+        })
+        .subscribe();
+    }
+
+    // === FORMULAIRE VENTE ===
+    document.getElementById('venteForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const produit = document.getElementById('produit').value.trim();
+      const quantite = parseInt(document.getElementById('quantite').value);
+      const prix = parseInt(document.getElementById('prix').value);
+
+      if (!produit || quantite <= 0 || prix <= 0) {
+        alert('Veuillez remplir tous les champs correctement.');
+        return;
+      }
+
+      const total = quantite * prix;
+      const now = new Date();
+      const vente = {
+        produit,
+        quantite,
+        prix,
+        total,
+        date_iso: now.toISOString(),
+        date_locale: now.toLocaleString('fr-FR')
+      };
+
+      await supabaseClient.from('ventes').insert([vente]);
+
+      // Mise à jour stock
+      const item = stock.find(s => s.produit === produit);
+      if (item) {
+        await supabaseClient.from('stock').update({
+          qte_vendue: item.qte_vendue + quantite
+        }).eq('id', item.id);
+      } else {
+        await supabaseClient.from('stock').insert([{
+          produit,
+          qte_recue: 0,
+          qte_vendue: quantite,
+          date_livraison: ''
+        }]);
+      }
+
+      alert('✅ Vente ajoutée en temps réel !');
+      e.target.reset();
+    });
+
+    // === AFFICHAGE VENTES ===
+    function afficherVentesTable() {
+      const tbody = document.getElementById('tableVentesBody');
+      tbody.innerHTML = '';
+      if (ventes.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Aucune vente</td></tr>`;
+        return;
+      }
+      ventes.forEach(v => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${v.date_locale}</td>
+          <td>${v.produit}</td>
+          <td>${v.quantite}</td>
+          <td>${v.prix.toLocaleString('fr-FR')}</td>
+          <td>${v.total.toLocaleString('fr-FR')}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // === AFFICHAGE STOCK ===
+    function afficherEtatStock() {
+      const tbody = document.getElementById('stockBody');
+      tbody.innerHTML = '';
+      stock.forEach(item => {
+        const reste = item.qte_recue - item.qte_vendue;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${item.produit}</td>
+          <td>${item.qte_recue}</td>
+          <td>${item.qte_vendue}</td>
+          <td>${reste}</td>
+          <td>${item.date_livraison || '-'}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // === GRAPHIQUE ===
+    let chartInstance = null;
+    function afficherGraphique() {
+      const ventesParMois = {};
+      ventes.forEach(v => {
+        const d = new Date(v.date_iso);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        ventesParMois[key] = (ventesParMois[key] || 0) + v.total;
+      });
+
+      const labels = Object.keys(ventesParMois).sort();
+      const data = labels.map(m => ventesParMois[m]);
+      const labelsFormates = labels.map(m => {
+        const [y, mth] = m.split('-');
+        return new Date(y, mth - 1).toLocaleString('fr-FR', { month: 'short' });
+      });
+
+      if (chartInstance) chartInstance.destroy();
+      const ctx = document.getElementById('ventesChart').getContext('2d');
+      chartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: { labels: labelsFormates, datasets: [{ label: 'Ventes (FCFA)', data, backgroundColor: '#f97316' }] },
+        options: { responsive: true, scales: { y: { beginAtZero: true } } }
+      });
+    }
+
+    // === NAVIGATION ===
+    function showPage(page) {
+      ['accueil', 'ventes', 'consultVentes', 'stock', 'etatStock', 'stats'].forEach(p => {
+        document.getElementById('page-' + p).style.display = (p === page) ? 'block' : 'none';
+      });
+      if (page === 'consultVentes') afficherVentesTable();
+      if (page === 'etatStock') afficherEtatStock();
+      if (page === 'stats') afficherGraphique();
+    }
+
+    // === RÉINITIALISER ===
+    async function reinitialiserDonnees() {
+      if (confirm("⚠️ Tout supprimer ?")) {
+        await supabaseClient.from('ventes').delete().gt('id', 0);
+        await supabaseClient.from('stock').delete().gt('id', 0);
+        ventes = []; stock = [];
+        alert("Données réinitialisées.");
+        location.reload();
+      }
+    }
+
+    // === DÉMARRAGE ===
+    window.addEventListener('load', initApp);
+  </script>
+</body>
+</html>
